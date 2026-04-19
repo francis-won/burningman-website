@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Burningman AI — Creative Production</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+KR:wght@300;400;700&family=Inter:wght@100;300;400;700&display=swap');
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+    :root{--black:#040404;--white:#f0ede8;--accent:#ff3d00;--accent2:#ff8c00;--ai-color:#a78bfa;--gray:#666;}
+    html{scroll-behavior:smooth;}
+    body{background:var(--black);color:var(--white);font-family:'Inter','Noto Sans KR',sans-serif;overflow-x:hidden;cursor:none;}
+    #cursor{position:fixed;width:10px;height:10px;background:var(--accent);border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);transition:width .3s,height .3s,background .3s;mix-blend-mode:difference;}
+    #cursor-ring{position:fixed;width:36px;height:36px;border:1px solid rgba(255,61,0,.5);border-radius:50%;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);transition:width .3s,height .3s,border-color .3s;}
+    #cursor.ai-mode{background:var(--ai-color);}
+    #cursor-ring.ai-mode{border-color:rgba(167,139,250,.5);}
+    #cursor.drag-mode{width:56px;height:56px;background:transparent;border:1.5px solid var(--white);mix-blend-mode:normal;border-radius:50%;}
+    #cursor-ring.drag-mode{opacity:0;}
+    #bg-canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;}
+    .noise{position:fixed;inset:0;z-index:2;pointer-events:none;opacity:.03;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
+    nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;justify-content:space-between;align-items:center;padding:26px 56px;}
+    nav::before{content:'';position:absolute;inset:0;background:linear-gradient(to bottom,rgba(4,4,4,.9),transparent);pointer-events:none;}
+    .nav-logo{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:.18em;color:#fff;text-decoration:none;position:relative;z-index:1;}
+    .nav-links{display:flex;gap:36px;list-style:none;position:relative;z-index:1;}
+    .nav-links a{font-size:.68rem;letter-spacing:.22em;text-transform:uppercase;color:rgba(240,237,232,.5);text-decoration:none;transition:color .3s;}
+    .nav-links a:hover{color:var(--white);}
+    #hero{position:relative;z-index:10;width:100%;height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;padding:0 56px;overflow:hidden;}
+    .hero-eyebrow{font-size:.62rem;letter-spacing:.45em;text-transform:uppercase;color:var(--accent);margin-bottom:20px;opacity:0;animation:fadeUp .9s .2s forwards;}
+    .hero-title-wrap{position:relative;opacity:0;animation:fadeUp 1s .4s forwards;}
+    .hero-burning{display:block;font-family:'Bebas Neue',sans-serif;font-size:clamp(5rem,12vw,13rem);line-height:.88;letter-spacing:.04em;color:var(--white);}
+    .hero-man{display:block;font-family:'Bebas Neue',sans-serif;font-size:clamp(5rem,12vw,13rem);line-height:.88;letter-spacing:.04em;-webkit-text-stroke:1.5px rgba(240,237,232,.22);color:transparent;}
+    .hero-ai-wrap{position:absolute;right:-20px;top:50%;transform:translateY(-50%);pointer-events:none;}
+    .hero-ai{font-family:'Bebas Neue',sans-serif;font-size:clamp(4rem,9vw,10rem);letter-spacing:.06em;line-height:1;background:linear-gradient(135deg,#ff3d00,#ff8c00,#ffcc00);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:aiPulse 3s ease-in-out infinite;position:relative;}
+    .hero-ai-glitch{position:absolute;inset:0;font-family:'Bebas Neue',sans-serif;font-size:inherit;letter-spacing:inherit;-webkit-text-fill-color:transparent;-webkit-text-stroke:1px var(--accent2);animation:glitch 5s infinite;pointer-events:none;}
+    @keyframes aiPulse{0%,100%{filter:drop-shadow(0 0 30px rgba(255,61,0,.5));}50%{filter:drop-shadow(0 0 60px rgba(255,61,0,.9));}}
+    @keyframes glitch{0%,94%,100%{opacity:0;}95%{opacity:.7;transform:translate(-4px,2px);clip-path:polygon(0 20%,100% 20%,100% 40%,0 40%);}96%{opacity:.5;transform:translate(4px,-2px);clip-path:polygon(0 60%,100% 60%,100% 80%,0 80%);}97%{opacity:0;}}
+    .hero-sub{margin-top:36px;max-width:420px;font-size:.9rem;line-height:1.9;color:rgba(240,237,232,.45);font-weight:300;opacity:0;animation:fadeUp .9s .8s forwards;}
+    .hero-cta{margin-top:44px;display:flex;gap:18px;opacity:0;animation:fadeUp .9s 1s forwards;}
+    .btn-fire{padding:13px 34px;background:var(--accent);color:var(--white);font-size:.7rem;letter-spacing:.22em;text-transform:uppercase;text-decoration:none;border:none;cursor:none;clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,10px 100%,0 calc(100% - 10px));transition:background .3s,transform .3s;}
+    .btn-fire:hover{background:var(--accent2);transform:translateY(-2px);}
+    .btn-ghost{padding:13px 34px;background:transparent;color:var(--white);font-size:.7rem;letter-spacing:.22em;text-transform:uppercase;text-decoration:none;border:1px solid rgba(240,237,232,.2);cursor:none;clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,10px 100%,0 calc(100% - 10px));transition:border-color .3s,transform .3s;}
+    .btn-ghost:hover{border-color:var(--white);transform:translateY(-2px);}
+    .hero-scroll-hint{position:absolute;bottom:36px;left:56px;display:flex;align-items:center;gap:12px;font-size:.58rem;letter-spacing:.35em;text-transform:uppercase;color:var(--gray);opacity:0;animation:fadeUp .9s 1.3s forwards;}
+    .scroll-bar{width:36px;height:1px;background:var(--accent);animation:barPulse 2s infinite;}
+    @keyframes barPulse{0%,100%{width:36px;opacity:1;}50%{width:60px;opacity:.4;}}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(28px);}to{opacity:1;transform:translateY(0);}}
+
+    /* ── REEL SECTIONS ── */
+    .reel-section{position:relative;z-index:10;padding:120px 0;}
+    .reel-head{padding:0 56px;display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:56px;}
+    .reel-label{font-size:.6rem;letter-spacing:.4em;text-transform:uppercase;margin-bottom:12px;}
+    .reel-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(2.5rem,5vw,5rem);letter-spacing:.03em;line-height:.95;}
+    .reel-desc{max-width:360px;font-size:.82rem;line-height:1.8;color:rgba(240,237,232,.4);font-weight:300;text-align:right;}
+    .reel-count{font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:.1em;opacity:.3;margin-top:8px;}
+    #ai-reel{border-top:1px solid rgba(167,139,250,.2);background:linear-gradient(to bottom,rgba(124,58,237,.04),transparent 60%);}
+    #ai-reel .reel-label{color:var(--ai-color);}
+    #ai-reel .reel-title .hl{color:var(--ai-color);}
+    #ad-reel{border-top:1px solid rgba(255,61,0,.15);}
+    #ad-reel .reel-label{color:var(--accent);}
+    #ad-reel .reel-title .hl{color:var(--accent);}
+
+    /* ── 5열 그리드 ── */
+    .h-track-wrap{position:relative;padding:0 56px;}
+    .h-track{
+      display:grid;
+      grid-template-columns:repeat(5,1fr);
+      gap:4px;
+    }
+
+    /* ── 카드 ── */
+    .vid-card{
+      width:100%;
+      position:relative;
+      overflow:hidden;
+      background:#0a0a0a;
+      aspect-ratio:16/10;
+      transition:transform .4s cubic-bezier(.25,.46,.45,.94), box-shadow .4s;
+      z-index:1;
+      isolation:isolate;
+    }
+    .vid-card.featured{
+      grid-column:span 2;
+      aspect-ratio:16/10;
+    }
+   .vid-card-inner{
+  position:absolute;
+  inset:0;
+  overflow:hidden;
+}
+.vid-card:hover{
+  transform:scale(1.08);
+  z-index:100;
+  box-shadow:0 24px 60px rgba(0,0,0,.85), 0 0 0 1px rgba(255,255,255,.06);
+}
+#ai-reel .vid-card:hover{
+  box-shadow:0 24px 60px rgba(0,0,0,.85), 0 0 30px rgba(167,139,250,.25);
+}
+#ad-reel .vid-card:hover{
+  box-shadow:0 24px 60px rgba(0,0,0,.85), 0 0 30px rgba(255,61,0,.2);
+}
+   
+    .vid-thumb{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  background-size:cover;
+  background-position:center;
+  filter:brightness(.75) saturate(.85);
+  transform:scale(1);                                       
+  transform-origin:center center;                           
+  transition:filter .5s, transform .6s cubic-bezier(.25,.46,.45,.94);
+  will-change:transform, filter;                             
+  backface-visibility:hidden;                                
+  -webkit-backface-visibility:hidden;
+}
+    .vid-card:hover .vid-thumb{
+  filter:brightness(1) saturate(1.15);
+  transform:scale(1.08);
+}
+    .vid-overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(4,4,4,.95) 0%,rgba(4,4,4,.1) 50%,transparent 100%);z-index:1;}
+    .vid-card::after{content:'';position:absolute;inset:0;border:1px solid transparent;transition:border-color .4s;pointer-events:none;z-index:3;}
+    .vid-card.ai-card:hover::after{border-color:rgba(167,139,250,.4);}
+    .vid-card.ad-card:hover::after{border-color:rgba(255,61,0,.35);}
+    .vid-ai-badge{position:absolute;top:14px;left:14px;padding:4px 11px;background:rgba(124,58,237,.22);border:1px solid rgba(167,139,250,.38);font-size:.5rem;letter-spacing:.2em;text-transform:uppercase;color:var(--ai-color);backdrop-filter:blur(4px);z-index:4;}
+    .vid-num{position:absolute;top:14px;right:14px;font-family:'Bebas Neue',sans-serif;font-size:.75rem;letter-spacing:.2em;color:rgba(255,255,255,.25);z-index:4;}
+    .vid-info{position:absolute;bottom:0;left:0;right:0;padding:18px 20px;z-index:4;}
+    .vid-tag{font-size:.52rem;letter-spacing:.28em;text-transform:uppercase;margin-bottom:5px;}
+    .tag-ai{color:var(--ai-color);}
+    .tag-ad{color:var(--accent);}
+    .vid-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(.8rem,1.2vw,1.3rem);letter-spacing:.04em;line-height:1.05;transform:translateY(5px);transition:transform .4s;}
+    .vid-card:hover .vid-title{transform:translateY(0);}
+
+    .reel-cta{margin-top:36px;padding:0 56px;}
+    .btn-yt-ai{display:inline-block;padding:12px 32px;background:transparent;color:var(--ai-color);font-size:.68rem;letter-spacing:.22em;text-transform:uppercase;text-decoration:none;border:1px solid rgba(167,139,250,.35);clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,10px 100%,0 calc(100% - 10px));transition:border-color .3s,background .3s;}
+    .btn-yt-ai:hover{border-color:var(--ai-color);background:rgba(167,139,250,.08);}
+    .btn-yt-ad{display:inline-block;padding:12px 32px;background:transparent;color:var(--accent);font-size:.68rem;letter-spacing:.22em;text-transform:uppercase;text-decoration:none;border:1px solid rgba(255,61,0,.35);clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,10px 100%,0 calc(100% - 10px));transition:border-color .3s,background .3s;}
+    .btn-yt-ad:hover{border-color:var(--accent);background:rgba(255,61,0,.08);}
+    .reel-divider{display:flex;align-items:center;gap:20px;margin:0 56px;opacity:.15;}
+    .reel-divider-line{flex:1;height:1px;background:var(--white);}
+    .reel-divider-text{font-size:.6rem;letter-spacing:.4em;text-transform:uppercase;white-space:nowrap;}
+
+    /* ── ABOUT ── */
+    #about{position:relative;z-index:10;padding:160px 56px;display:grid;grid-template-columns:1fr 1fr;gap:100px;align-items:center;}
+    .about-eyebrow{font-size:.6rem;letter-spacing:.4em;text-transform:uppercase;color:var(--accent);margin-bottom:20px;}
+    .about-heading{font-family:'Bebas Neue',sans-serif;font-size:clamp(3rem,6vw,6.5rem);line-height:.9;letter-spacing:.03em;margin-bottom:32px;}
+    .about-heading .outline{-webkit-text-stroke:1px rgba(240,237,232,.2);color:transparent;display:block;}
+    .about-divider{width:48px;height:1px;background:var(--accent);margin:28px 0;}
+    .about-body{font-size:.9rem;line-height:1.95;color:rgba(240,237,232,.5);font-weight:300;}
+    .about-body+.about-body{margin-top:14px;}
+    .about-stats{display:grid;grid-template-columns:1fr 1fr;gap:36px;margin-top:52px;}
+    .stat-n{font-family:'Bebas Neue',sans-serif;font-size:3.2rem;color:var(--accent);line-height:1;}
+    .stat-l{font-size:.62rem;letter-spacing:.22em;text-transform:uppercase;color:var(--gray);margin-top:6px;}
+    .about-right{position:relative;height:520px;}
+    .about-box{width:100%;height:100%;border:1px solid rgba(255,61,0,.12);background:linear-gradient(135deg,rgba(255,61,0,.06),transparent 60%);display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;}
+    .about-box-text{font-family:'Bebas Neue',sans-serif;font-size:6.5rem;color:rgba(255,61,0,.05);line-height:1;letter-spacing:.08em;text-align:center;user-select:none;}
+    .about-corner{position:absolute;top:24px;left:24px;width:48px;height:1px;background:var(--accent);}
+    .about-corner::after{content:'';position:absolute;top:-24px;left:48px;width:1px;height:48px;background:var(--accent);}
+    .about-badge{position:absolute;bottom:24px;right:24px;width:90px;height:90px;border:1px solid rgba(255,61,0,.35);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.5rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);text-align:center;line-height:1.5;animation:spin 14s linear infinite;}
+    @keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+
+    /* ── SERVICES ── */
+    #services{position:relative;z-index:10;padding:120px 56px;}
+    .services-top{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:64px;}
+    .sec-label{font-size:.6rem;letter-spacing:.4em;text-transform:uppercase;color:var(--accent);margin-bottom:14px;}
+    .sec-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(2.5rem,5vw,5rem);letter-spacing:.03em;line-height:.95;}
+    .sec-count{font-family:'Bebas Neue',sans-serif;font-size:5rem;color:rgba(255,61,0,.1);line-height:1;}
+    .services-list{border-top:1px solid rgba(255,255,255,.06);}
+    .svc-item{display:grid;grid-template-columns:80px 1fr 1fr auto;gap:40px;align-items:center;padding:44px 0;border-bottom:1px solid rgba(255,255,255,.06);position:relative;overflow:hidden;cursor:none;transition:padding-left .4s;}
+    .svc-item::before{content:'';position:absolute;left:0;top:0;bottom:0;width:0;background:rgba(255,61,0,.04);transition:width .5s;}
+    .svc-item:hover::before{width:100%;}
+    .svc-item:hover{padding-left:16px;}
+    .svc-num{font-family:'Bebas Neue',sans-serif;font-size:.8rem;letter-spacing:.25em;color:var(--accent);}
+    .svc-name{font-family:'Bebas Neue',sans-serif;font-size:clamp(1.6rem,3vw,2.8rem);letter-spacing:.04em;}
+    .svc-desc{font-size:.82rem;line-height:1.8;color:rgba(240,237,232,.4);font-weight:300;}
+    .svc-arrow{font-size:1.2rem;color:var(--accent);opacity:0;transform:translateX(-10px);transition:opacity .3s,transform .3s;}
+    .svc-item:hover .svc-arrow{opacity:1;transform:translateX(0);}
+
+    /* ── CONTACT ── */
+    #contact{position:relative;z-index:10;padding:160px 56px 120px;min-height:100vh;display:flex;flex-direction:column;justify-content:center;}
+    .contact-big{font-family:'Bebas Neue',sans-serif;font-size:clamp(4rem,10vw,11rem);line-height:.88;letter-spacing:.02em;margin-bottom:80px;}
+    .contact-big .outline{-webkit-text-stroke:1.5px rgba(240,237,232,.18);color:transparent;}
+    .contact-big .fire{color:var(--accent);}
+    .contact-grid{display:grid;grid-template-columns:1fr 1fr;gap:80px;}
+    .ci-label{font-size:.58rem;letter-spacing:.35em;text-transform:uppercase;color:var(--accent);margin-bottom:10px;}
+    .ci-val{font-size:.95rem;color:var(--white);text-decoration:none;display:block;transition:color .3s;}
+    a.ci-val:hover{color:var(--accent);}
+    .ci-block{margin-bottom:32px;}
+    .ci-addr{font-size:.82rem;line-height:1.9;color:rgba(240,237,232,.4);font-weight:300;}
+    .contact-form{display:flex;flex-direction:column;gap:22px;}
+    .ff{display:flex;flex-direction:column;gap:7px;}
+    .ff label{font-size:.58rem;letter-spacing:.28em;text-transform:uppercase;color:var(--gray);}
+    .ff input,.ff textarea{background:transparent;border:none;border-bottom:1px solid rgba(255,255,255,.1);padding:11px 0;color:var(--white);font-family:'Inter',sans-serif;font-size:.88rem;outline:none;resize:none;transition:border-color .3s;}
+    .ff input:focus,.ff textarea:focus{border-bottom-color:var(--accent);}
+    .ff textarea{height:90px;}
+    .form-btn{margin-top:8px;padding:15px 44px;background:var(--accent);color:var(--white);font-size:.7rem;letter-spacing:.25em;text-transform:uppercase;border:none;cursor:none;align-self:flex-start;clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,10px 100%,0 calc(100% - 10px));transition:background .3s,transform .3s;}
+    .form-btn:hover{background:var(--accent2);transform:translateY(-2px);}
+
+    /* ── FOOTER ── */
+    footer{position:relative;z-index:10;padding:36px 56px;border-top:1px solid rgba(255,255,255,.05);display:flex;justify-content:space-between;align-items:center;}
+    .f-logo{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:.15em;color:#fff;}
+    .f-copy{font-size:.6rem;letter-spacing:.12em;color:var(--gray);}
+    .f-links{display:flex;gap:24px;list-style:none;}
+    .f-links a{font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;color:var(--gray);text-decoration:none;transition:color .3s;}
+    .f-links a:hover{color:var(--white);}
+
+    /* ── REVEAL ── */
+    .reveal{opacity:0;transform:translateY(44px);transition:opacity 1s cubic-bezier(.25,.46,.45,.94),transform 1s cubic-bezier(.25,.46,.45,.94);}
+    .reveal.on{opacity:1;transform:translateY(0);}
+
+    /* ── 모바일 ── */
+    @media(max-width:900px){
+      nav{padding:22px 24px;}.nav-links{display:none;}
+      #hero{padding:0 24px;}
+      .reel-head{padding:0 24px;}
+      .h-track-wrap{padding:0 24px;}
+      .h-track{grid-template-columns:repeat(2,1fr);gap:3px;}
+      .vid-card.featured{grid-column:span 2;}
+      .reel-cta{padding:0 24px;}
+      .reel-divider{margin:0 24px;}
+      #about{grid-template-columns:1fr;padding:100px 24px;gap:0;}.about-right{display:none;}
+      #services{padding:80px 24px;}.svc-item{grid-template-columns:50px 1fr;gap:20px;}.svc-desc,.svc-arrow{display:none;}
+      #contact{padding:100px 24px 80px;}.contact-grid{grid-template-columns:1fr;}
+      footer{flex-direction:column;gap:16px;padding:24px;text-align:center;}
+    }
+  </style>
+</head>
+<body>
+<div id="cursor"></div>
+<div id="cursor-ring"></div>
+<div class="noise"></div>
+<canvas id="bg-canvas"></canvas>
+
+<nav>
+  <a href="#hero" class="nav-logo">BURNINGMAN AI</a>
+  <ul class="nav-links">
+    <li><a href="#ai-reel">AI Reel</a></li>
+    <li><a href="#ad-reel">Ad Reel</a></li>
+    <li><a href="#about">About</a></li>
+    <li><a href="#contact">Contact</a></li>
+  </ul>
+</nav>
+
+<section id="hero">
+  <p class="hero-eyebrow">Creative Production Studio — Seoul, Korea</p>
+  <div class="hero-title-wrap">
+    <span class="hero-burning">BURNING</span>
+    <span class="hero-man">MAN</span>
+    <div class="hero-ai-wrap">
+      <div class="hero-ai">AI<div class="hero-ai-glitch">AI</div></div>
+    </div>
+  </div>
+  <p class="hero-sub">영상 하나가 브랜드의 모든 것을 말합니다.<br>광고영상 · 브랜드 필름 · AI 광고영상</p>
+  <div class="hero-cta">
+    <a href="#ai-reel" class="btn-fire">View Works</a>
+    <a href="#contact" class="btn-ghost">Contact Us</a>
+  </div>
+  <div class="hero-scroll-hint"><div class="scroll-bar"></div>Scroll</div>
+</section>
+
+<!-- AI REEL -->
+<section id="ai-reel" class="reel-section reveal">
+  <div class="reel-head">
+    <div>
+      <p class="reel-label">AI 릴</p>
+      <h2 class="reel-title">AI<br><span class="hl">REEL</span></h2>
+      <p class="reel-count">41 WORKS</p>
+    </div>
+    <p class="reel-desc">최신 AI 기술로 구현한 혁신적 영상 크리에이티브.<br>상상을 현실로 만드는 AI 광고영상 포트폴리오.</p>
+  </div>
+ <div class="h-track-wrap">
+    <div class="h-track" id="ai-track">
+      <div class="vid-card ai-card featured"><div class="vid-thumb" style="background-image:url('https://img.youtube.com/vi/4V1pWZBvGsw/maxresdefault.jpg');"></div><div class="vid-overlay"></div><div class="vid-ai-badge">✦ AI Generated</div><div class="vid-num">01</div><div class="vid-info"><p class="vid-tag tag-ai">AI Work</p><h3 class="vid-title">LUMINOUS</h3></div></div>
+      <div class="vid-card ai-card"><div class="vid-thumb" style="background-image:url('https://img.youtube.com/vi/r2f7Rsq17Xs/maxresdefault.jpg');"></div><div class="vid-overlay"></div><div class="vid-ai-badge">✦ AI Generated</div><div class="vid-num">02</div><div class="vid-info"><p class="vid-tag tag-ai">Telecom · AI Media Art</p><h3 class="vid-title">SKT AI MEDIA ART</h3></div></div>
+      <div class="vid-card ai-card"><div class="vid-thumb" style="background-image:url('https://img.youtube.com/vi/N6dY_FkPMjM/maxresdefault.jpg');"></div><div class="vid-overlay"></div><div class="vid-ai-badge">✦ AI Generated</div><div class="vid-num">03</div><div class="vid-info"><p class="vid-tag tag-ai">ESG · Brand Film</p><h3 class="vid-title">ESG 미래로</h3></div></div>
+      <div class="vid-card ai-card"><div class="vid-thumb" style="background-image:url('https://img.youtube.com/vi/zP6mKPVcZxM/maxresdefault.jpg');"></div><div class="vid-overlay"></div><div class="vid-ai-badge">✦ AI Generated</div><div class="vid-num">04</div><div class="vid-info"><p class="vid-tag tag-ai">Brand · AI Work</p><h3 class="vid-title">MY BROWN</h3></div></div>
+      <div class="vid-card ai-card"><div class="vid-thumb" style="background-image:url('https://img.youtube.com/vi/Z1VETOpcxnA/maxresdefault.jpg');"></div><div class="vid-overlay"></div><div class="vid-ai-badge">✦ AI Generated</div><div class="vid-num">06</div><div class="vid-info"><p class="vid-tag tag-ai">AI Work</p><h3 class="vid-title">AI WORK 06</h3></div></div>
+      <div class="vid-card ai-card"><div class="vid-thumb" style="background-image:url('https://img.youtube.com/vi/IFe5xNXTrXA/maxresdefault.jpg');"></div><div class="vid-overlay"></div><div class="vid-ai-badge">✦ AI Generated</div><div class="vid-num">07</div><div class="vid-info"><p class="vid-tag tag-ai">AI Work</p><h3 class="vid-title">AI WORK 07</h3></div></div>
+      <div class="vid-card ai-card"><div class="vid-thumb" style="background-image:url('https://img.youtube.com/vi/-eAYUhethXc/maxresdefault.jpg');"></div><div class="vid-overlay"></div><div class="vid-ai-badge">✦ AI Generated</div><div class="vid-num">08</div><div class="vid-info"><p class="vid-tag tag-ai">AI Work</p><h3 class="vid-title">AI WORK 08</h3></div></div>
+      <div class="vid-card ai-card"><div class="vid-thumb" style="background-image:url('https://img.youtube.com/vi/SFirjsp1-Io/maxresdefault.jpg');"></div><div class="vid-overlay"></div><div class="vid-ai-badge">✦ AI Generated</div><div class="vid-num">09</div><div class="vid-info"><p class="vid-tag tag-ai">AI Work</p><h3 class="vid-title">AI WORK 09</h3></div></div>
+      <div class="vid-card ai-card"><div class="vid-thumb" style="background-image:url('https://img.youtube.com/vi/Fk4_wo2-Z_0/maxresdefault.jpg');"></div><div class="vid-overlay"></div><div class="vid-ai-badge">✦ AI Generated</div><div class="vid-num">10</div><div class="vid-info"><p class="vid-tag tag-ai">AI Work</p><h3 class="vid-title">AI WORK 10</h3></div></div>
+      <div class="vid-card ai-card"><div class="vid-thumb" style="background-image:url('https://img.youtube.com/vi/U8-fpRHRtR8/maxresdefault.jpg');"></div><div class="vid-overlay"></div><div class="vid-ai-badge">✦ AI Generated</div><div class="vid-num">11</div><div class="vid-info"><p class="vid-tag tag-ai">AI Work</p><h3 class="vid-title">AI WORK 11</h3></div></div>
+      <div class="vid-card ai-card"><div class="vid-thumb" style="background-image:url('https://img.youtube.com/vi/NGhyqDSR0yU/maxresdefault.jpg');"></div><div class="vid-overlay"></div><div class="vid-ai-badge">✦ AI Generated</div><div class="vid-num">12</div><div class="vid-info"><p class="vid-tag tag-ai">AI Work</p><h3 class="vid-title">AI WORK 12</h3></div></div>
+      <div class="vid-card ai-card"><div class="vid-thumb" style="background-image:url('https://img.youtube.com/vi/eJt9ysrHjS8/maxresdefault.jpg');"></div><div class="vid-overlay"></div><div class="vid-ai-badge">✦ AI Generated</div><div class="vid-num">13</div><div class="vid-info"><p class="vid-tag tag-ai">Telecom · AI Work</p><h3 class="vid-title">AI WORK 13</h3></div></div>
+      <div class="vid-card ai-card"><div class="vid-thumb" style="background-image:url('https://img.youtube.com/vi/26JYfTaG0NM/maxresdefault.jpg');"></div><div class="vid-overlay"></div><div class="vid-ai-badge">✦ AI Generated</div><div class="vid-num">14</div><div class="vid-info"><p class="vid-tag tag-ai">AI Work</p><h3 class="vid-title">AI WORK 14</h3></div></div>
+      <div class="vid-card ai-card"><div class="vid-thumb" style="background-image:url('https://img.youtube.com/vi/lvVnbvQ5HWc/maxresdefault.jpg');"></div><div class="vid-overlay"></div><div class="vid-ai-badge">✦ AI Generated</div><div class="vid-num">05</div><div class="vid-info"><p class="vid-tag tag-ai">AI Work</p><h3 class="vid-title">AI WORK 15</h3></div></div>      <div class="vid-card ai-card"><div class="vid-thumb" style="background-image:url('https://d41chssnpqdne.cloudfront.net/user_upload_by_module/chat_bot/files/34307915/2sP76c81C3oJH1im.png?Expires=1777736633&Signature=IAsPVI-gl0a-StMH97-drgB4eRU0c~l44XCXsuw6Snk1B9234gjB6rSp9I8ZyQpe~bKkh7oomJJmKDNKeEQg8FuddB9SMqWtQDa0kZRKddN0x1RdwAsaMg6CWZA1DP-FzVemuBaezlXzOXeWHzhHiohcXdnF4DQK5vx66fr6X2gQ0u3ax~mp0bWEpA-2UbqN0HgCJSe6TAUBhI6EpPAQ76VWIXkqzihvzu5am5mPkWuLJGDOD9TEm5-rqRIzF2PwV9~Mcku3ajevldxVd5hzGfv4I7vFKaNIKtSEVT57HWq2deXp6f9CU2vUNEwZSA76wnfKKsh42MfjU7Wg0kBgtQ__&Key-Pair-Id=K3USGZIKWMDCSX');"></div><div class="vid-overlay"></div><div class="vid-ai-badge">✦ AI Generated</div><div class="vid-num">15</div><div class="vid-info"><p class="vid-tag tag-ai">AI Work · Portrait</p><h3 class="vid-title">AI WORK 15</h3></div></div>
+
+      <div class="vid-card ai-card"><div class="vid-thumb" style="background-image:url('https://d41chssnpqdne.cloudfront.net/user_upload_by_module/chat_bot/files/34307915/xoo5TLRi8nsxYuMA.png?Expires=1777736659&Signature=XoDZAxW~NpgrSCNfs3ovx1i9CyuKf6ZbKClFgQS-J3PoKf8BRNQ7rc4IVSBfZEonEXwF7nf6imhtgfeuxpFv6k0oZ1D-KtinqepdqHZiSwRI2EGyzGNdJfkDeMUpFvgMDjzGgvWi1te9t-X~JgMBLcXD20MH-fXsnprLd8OxWYUb4aD33DlZum5kQO~OWCyOL8hPThr7Ps1dbW9rHo4nU-ithHrz9pH789H~4Neb-bKHJ6CFwcP3yxvE2ekYH0dES~GGsC4ugNm5xLJLra9hWrwhWnUWbydsrpLyKvIcnSstuCcUynZV7TtcZL10UE99QbSjCtqhfM4-qwNVYvCI4w__&Key-Pair-Id=K3USGZIKWMDCSX');"></div><div class="vid-overlay"></div><div class="vid-ai-badge">✦ AI Generated</div><div class="vid-num">16</div><div class="vid-info"><p class="vid-tag tag-ai">AI Work · Portrait</p><h3 class="vid-title">AI WORK 16</h3></div></div>
+
+      <div class="vid-card ai-card"><div class="vid-thumb" style="background-image:url('https://d41chssnpqdne.cloudfront.net/user_upload_by_module/chat_bot/files/34307915/X8h4T8iKoyiJxDNY.png?Expires=1777736682&Signature=oy35jOXih~qkO3qB2Bup5idxGvVgCKTGEEgEZfTn0vPUukV7uc-zoRs9JmT~Exwy5jSpz6B~ancCkR5aRFAfpx4B4Oy9wR9gaMKMcXtE3rR~gPUkQE25JmveNbp8HjqEb3TXrZWf3P4R~lDQOg3f0TIPNUjD3Nu5y-~uucDe5UvMi1CV0-PEyBJ2ka-N0WW9WXhFmmwZU42tXfDdHzo8t8vvn076nudmbah~0ScG9kiVTSdJWQ4~6dvrPqBbFauOX~XkNfjtsCoP4XNTW9H3N3rJeJV80xdlsqoOEh2cVlxv8xYHrcJSCI8Nw3ZO~phk2hPpOwFuEbxlxJKjf4c5nA__&Key-Pair-Id=K3USGZIKWMDCSX');"></div><div class="vid-overlay"></div><div class="vid-ai-badge">✦ AI Generated</div><div class="vid-num">17</div><div class="vid-info"><p class="vid-tag tag-ai">AI Work · Portrait</p><h3 class="vid-title">AI WORK 17</h3></div></div>
+
+      <div class="vid-card ai-card"><div class="vid-thumb" style="background-image:url('https://d41chssnpqdne.cloudfront.net/user_upload_by_module/chat_bot/files/34307915/glwhPrQEK30QpPHv.png?Expires=1777736686&Signature=mSvzvvmaO64ZPcnm9twu1sl3Hi8fP0pnZVgM~gSYg3vrp-V8vuHYw1vNdWM7PO3DEGXdHBUBGFxBXbRStnLD07y5SOXeJUUOsZRtEoJU-emVlL~51CEvhW-sWNnBcV~EPmzHS2iJqcl3l6aPEoyQ-C-Tkm3htZzEnJ-7b3ATUUNmuXkMpl9AQ34xInioehLAWv~TWZcJnnLx30xGrgSHkCif0hoG-xJxwFEdTu4aFDO9oNT1x9iZXVGSCMMraG6Vhy8s3pIJEF7p3rfRKR1kSAc~1vZW93VuVqlVp5XfJPj09Z9DYYIRnsh7ll90lmXaTIwzFACSA1aTO-i0lfNqLw__&Key-Pair-Id=K3USGZIKWMDCSX');"></div><div class="vid-overlay"></div><div class="vid-ai-badge">✦ AI Generated</div><div class="vid-num">18</div><div class="vid-info"><p class="vid-tag tag-ai">AI Work · Portrait</p><h3 class="vid-title">AI WORK 18</h3></div></div>
+
+      <div class="vid-card ai-card"><div class="vid-thumb" style="background-image:url('https://d41chssnpqdne.cloudfront.net/user_upload_by_module/chat_bot/files/34307915/6BxN1vSEL4fyXOFi.png?Expires=1777736712&Signature=oZx-TEibKbRd6zwZnukaVSD4ptPrztPUXESF8rnB8WP-Y2sWpK1-CJi6cDqRk8vOxllrIdQPGU-~3QAqU-hadbKm36mFX3hZVlfr9HYTXVWn~tAwCTDuU5BBVoFwYaOWbqveIuzb-1Xag3qUSszxfnbK~efv~J-WgJOR1N~Wqk~BmvsFIWhMuDnF3367AGqxGViW4zT1rlanmfl6qqwtdVKYEIECJvzNX~lYVaDCUPDP1ffu6AqneKc8udSX1BffcHaCu8QmyqBnv1Kn16-26qF22vAgH91z2q3Ub7qANRSi7-4SzSUaDBP9sJlKLFRxZ-KbJOZtnobYE78OZBpglA__&Key-Pair-Id=K3USGZIKWMDCSX');"></div><div class="vid-overlay"></div><div class="vid-ai-badge">✦ AI Generated</div><div class="vid-num">19</div><div class="vid-info"><p class="vid-tag tag-ai">AI Work · Fashion</p><h3 class="vid-title">AI WORK 19</h3></div></div>
+
+      <div class="vid-card ai-card"><div class="vid-thumb" style="background-image:url('https://d41chssnpqdne.cloudfront.net/user_upload_by_module/chat_bot/files/34307915/Unu9E5as7kWPMNnJ.png?Expires=1777736730&Signature=BNIl1VjAnrmo2j7fd0-RJhrXPlD8YVIGJYR6kKQJc-pXleNhR~Z988R5Y94a79VZaglvgik4sbRFG5TDlvo8Tbx~vjPqHOJoluMO-dNWw0099566UuuuvPAhxlFZAecL62eNTiA9-vYtEsI80~SQAdV6ht2bQeYjCLXLNiaHnut2-J~viyy0NfvLphbLY~A-WodtsTk7xhk1zetf2QZjHG276MVsuX-W4v8d6NxnBPzvCcbBUQhVJThngZIhJsFz5AzB2VwwMiJ21Kyzq9ujd6X-dlB6lil~EJNP1n3c0Qe~WnpwEkYfTsIkE~QhkKDmS7gobIMZ3Nrq4THs346PVA__&Key-Pair-Id=K3USGZIKWMDCSX');"></div><div class="vid-overlay"></div><div class="vid-ai-badge">✦ AI Generated</div><div class="vid-num">20</div><div class="vid-info"><p class="vid-tag tag-ai">AI Work · Fashion</p><h3 class="vid-title">AI WORK 20</h3></div></div>
+
+      <div class="vid-card ai-card"><div class="vid-thumb" style="background-image:url('https://d41chssnpqdne.cloudfront.net/user_upload_by_module/chat_bot/files/34307915/pPHbHj17TCJHZEEJ.png?Expires=1777736736&Signature=EVN1slzQPGrbFC1dy5oRfBWCegPoXPy-SWZKpylgZd0RE7BhA7DGlTimeHBQD8lJsuKIK2d~syTuLepyVSZjgTyEVJXwsY4U0fgIJsO43W-3INPM3zLIKv9pzmnIYrVKdAVQH5Ln7Jsj2~NP9av-alinleX9gKeczxs0ZPaze8fescG-QEh1W3tIECJXKiVBrx7PS~wuenVcxMS9UDgMnOfo4wPzQLuOgpOVlBHuy21bjOnOEnlAOMtfGQtN7PEa2lj7VHg1zYU~wVep9mQmejeS3HBbPpQhsH2lvu1uXC1RQILkR0Ny4EsbpUGAR4ob~iDo~v1EtiKheRFUFcDIgQ__&Key-Pair-Id=K3USGZIKWMDCSX');"></div><div class="vid-overlay"></div><div class="vid-ai-badge">✦ AI Generated</div><div class="vid-num">21</div><div class="vid-info"><p class="vid-tag tag-ai">AI Work · Fashion</p><h3 class="vid-title">AI WORK 21</h3></div></div>
+
+      <div class="vid-card ai-card"><div class="vid-thumb" style="background-image:url('https://d41chssnpqdne.cloudfront.net/user_upload_by_module/chat_bot/files/34307915/EUk95SarRQ43wYMl.png?Expires=1777736743&Signature=ZVvIGNaP2HqkFESunUMgSft8sRqPIqkKfioheeEorK~7eiTAP4MUj4PbHXAdUkI81z8dGl4Ury5zUCY9OdX8XA8i6uGm9x475JKqlrBOxS8X6HOXkS3~5ZqtSG5f1NOStsWVb3lrtIjCW3Q-xv9p~RPXy6PKkC15Oetczan5vPfWTwN2sr1UMteSczC8tlD7Jsf5w1jT056x7MpyexZiz9TtItArnC43HIrhmDd7AtoXsZuFqu2wRYjpuxSXuqk2GgSTTvVO39UZBfoHAL61PrnCM45N27rjAtOXK1uwi7So6qHfX~D11n2JeP9kMvADXwyjZyZeSASxdeLxtCKXHQ__&Key-Pair-Id=K3USGZIKWMDCSX');"></div><div class="vid-overlay"></div><div class="vid-ai-badge">✦ AI Generated</div><div class="vid-num">22</div><div class="vid-info"><p class="vid-tag tag-ai">AI Work · Fashion</p><h3 class="vid-title">AI WORK 22</h3></div></div>
+
+      <div class="vid-card ai-card"><div class="vid-thumb" style="background-image:url('https://d41chssnpqdne.cloudfront.net/user_upload_by_module/chat_bot/files/34307915/yOaUPIABR1lvr3ou.png?Expires=1777736771&Signature=e4lxccQXvZYi58xf-eCIpEwM78J~SEbAHhaKkKVtBGoc2GS8Djd9O9S4QwG7hzICRwLkTsc40PioACrY-mcq~3gk9GJ-8MQLAdJLCNnU-r-8r2welqGQNWUzCCkUUqW5kuc72cMhE329scdBKmoVNaj7UIDaB0VqV6Z~1pEqYFwoZG11bwQKjdCQMv49ETnlXWyK5fLetW1tUkagp~S7itauElqFNdLk3gViIL16grAS9pKHM6~UpnlboZFV8nCSFQorTOjamDqH~kqCT8ePWdM5DzkuNLJebrbwZ1IOYmZkaYqdNaW4gtGSiWIGKEokzhlF-ciYjJxykFEvj3EWeg__&Key-Pair-Id=K3USGZIKWMDCSX');"></div><div class="vid-overlay"></div><div class="vid-ai-badge">✦ AI Generated</div><div class="vid-num">23</div><div class="vid-info"><p class="vid-tag tag-ai">AI Work · Landscape</p><h3 class="vid-title">AI WORK 23</h3></div></div>
+
+      <div class="vid-card ai-card"><div class="vid-thumb" style="background-image:url('https://d41chssnpqdne.cloudfront.net/user_upload_by_module/chat_bot/files/34307915/OIXWaQ5Yo2RautG4.png?Expires=1777736810&Signature=PWG5hPExYRz0VI8KGFe2BJGNJXCSN3NqUJFLzmYQUCc84HgbPZ5qt6RoKaY2rH4R~inRPBF~pnQmbNNRUQ6A0DRHTkUftZhKFzVKk1Fpxi~IXBIIzJzxjgzhcK0-QqPbLPMIx2nhvVMjXnzJaYIdZeb3PJtGiHthYtfqBKUveVJbvOGo5FW-jI63dsOs8Q7U4HVOz-iPPsSuAVGsoO1cR~Ea3ZDY73-QXnbW70wg69qFiHYS1e2UYIgoSuC-vt-VXCmBfaUntTR1qDiRLSwk7QX4poN4Ft9FUiaJCGPO9DYUqP65B8TBSbgrO6GRHUSEocx34Le3kAJBLBX574p-Yw__&Key-Pair-Id=K3USGZIKWMDCSX');"></div><div class="vid-overlay"></div><div class="vid-ai-badge">✦ AI Generated</div><div class="vid-num">24</div><div class="vid-info"><p class="vid-tag tag-ai">AI Work · Portrait</p><h3 class="vid-title">AI WORK 24</h3></div></div>
+
+      <div class="vid-card ai-card"><div class="vid-thumb" style="background-image:url('https://d41chssnpqdne.cloudfront.net/user_upload_by_module/chat_bot/files/34307915/HuwCk9lcrsB46AJt.png?Expires=1777736822&Signature=Kapga7dRBYa91LUGQoXJ4f~k~~yEYA~NiyKvsrqRb-M9tuA82bLGkQnFUJIafDBxBf-A4uz3hnaooIa3x8~aL8wJ9pC~pVqDzLpW7z-zOUDVgalwPaQuTA57MOhMbOikh-HWI1y9lworQnc9d8E2I4V0pAlLV5knh-A48HjJRrKAcuLMuyE3nGVYqP6ChrMSR7j5DobZrG~8yKFo6QqIVTcL2KE~r~r6rviA5FAJSRLZ7N2lGwU~GY71uCbGUiTZjHLtnlAYLt7d47m-8pdzv0f7YqFUf4EWCDdOQiI6tzmbW83VzIt8Oy7k2WTLkuR2nFMSLfXn2wi5Twhj94khQg__&Key-Pair-Id=K3USGZIKWMDCSX');"></div><div class="vid-overlay"></div><div class="vid-ai-badge">✦ AI Generated</div><div class="vid-num">25</div><div class="vid-info"><p class="vid-tag tag-ai">AI Work · Portrait</p><h3 class="vid-title">AI WORK 25</h3></div></div>
+
+      <div class="vid-card ai-card"><div class="vid-thumb" style="background-image:url('https://d41chssnpqdne.cloudfront.net/user_upload_by_module/chat_bot/files/34307915/EFMIuskHAg9a9PvK.png?Expires=1777736830&Signature=lQ~WKLr5kLLIHdaGYAVqkL4mtP~4f94daKFUGftcl-z8Ru4eChbMs3wKMz1mclEkkl4xoWvG24InffGkgve1c3JbAiwTJlUdr3bDQfUapi8Gg8gevwhzkNr-vMObpEmPOuDRFk03mNn6YViFtUrDXH0wwyCDb1AtCDW4G6T~gQ16Yf~EhnFtNthGuteZJl2VqwMPi5uFfXi1-ykQKZVhkfeMS7VRdOtKRIPa58BBhEg~kN64j2ugZqj-Aj2jlYtQEqxOG~kd44HHxj6EjVP0I0iRWbmS72Y9ThhJRFni-5fIG~eSatSCoPjbnoPcnNphtMKAiVP0A-luo86Qz53hLA__&Key-Pair-Id=K3USGZIKWMDCSX');"></div><div class="vid-overlay"></div><div class="vid-ai-badge">✦ AI Generated</div><div class="vid-num">26</div><div class="vid-info"><p class="vid-tag tag-ai">AI Work · Portrait</p><h3 class="vid-title">AI WORK 26</h3></div></div>
+
+ <div class="vid-card ai-card"><div class="vid-thumb" style="background-image:url('https://d41chssnpqdne.cloudfront.net/user_upload_by_module/chat_bot/files/34307915/6AMoSW278DPktFl8.png?Expires=1777737800&Signature=gddslAstUKmUTCJpBHH7Oj7RlJpEdOoDb-QskLjOykB7XEdkWDQE0IUoWgIBBqLnXlDutFHJdSGxlHqc7C2964qtjwItelhiuslZKS99jKm-0BnO8ODH3IvUTPv~~yZtVtex5JV6q7~2ihFG6-IkCb38Kj79Vneo57N0pZ1tN12pelK56~uSmGZPpxaig1w~50ifH3BdK-EX7UkQRoUnDC53hjEq1zKBI02SDBFcU6UOVRK4PqKBwcdX0nWynj8nxq4cIfsXmeMTtg1Fm0YW5kBsc70-kHS3RH2A~63d841bCQgJnWYGg4BpiNLMI6L0dA57STNVmDz-n9SHo-TVmQ__&Key-Pair-Id=K3USGZIKWMDCSX');"></div><div class="vid-overlay"></div><div class="vid-ai-badge">✦ AI Generated</div><div class="vid-num">27</div><div class="vid-info"><p class="vid-tag tag-ai">Brand · Product</p><h3 class="vid-title">SONY UNDERWATER</h3></div></div>
+
+      <div class="vid-card ai-card"><div class="vid-thumb" style="background-image:url('https://d41chssnpqdne.cloudfront.net/user_upload_by_module/chat_bot/files/34307915/uiR2YXADZjyOCRcX.png?Expires=1777737800&Signature=qAObRKr6O~~hd78IuLbmEnvzYrX2i5ZNYUBYbiRJ~3FzzV6tBQHRetIkjs53cE9pWLyYRQGHQPIes82FNwq95oPMdPWgS~Ib3OjN9TeZrkQgptCrcPVeobT5wj4nK4LrAmZHL~YF0nXfYECA7tYa5alchzef0im~kqcybCCpS3mP00sRzYH17HwF5VaMvDNL3pNtnh~WPRr3RZrqb6Eyjm~SymmougcOuZaOQWfHv25CYwZKrUf1ND2cKgFUC8W1u6usDgRO6wTuj673RIya7g-1Xdxo2bCRnqrqQnuh5K8lB2dd5t32tGf0jpK9iFJlYLISfHk2MIUz-dBWukJONA__&Key-Pair-Id=K3USGZIKWMDCSX');"></div><div class="vid-overlay"></div><div class="vid-ai-badge">✦ AI Generated</div><div class="vid-num">28</div><div class="vid-info"><p class="vid-tag tag-ai">Surreal · Cinematic</p><h3 class="vid-title">GOLDEN GATE</h3></div></div>
+
+      <div class="vid-card ai-card"><div class="vid-thumb" style="background-image:url('https://d41chssnpqdne.cloudfront.net/user_upload_by_module/chat_bot/files/34307915/pafTPMWHnWGOvcrN.png?Expires=1777737800&Signature=aVPYsnyW97VvafZZ8SXMbWkC85JHjA-VLxmFNxKib1CSEkVE6XXe~hCOJf-uHDUwwPgQzADdujT72d5eZv1J1QxINU4GG9h3EcRR8ZbGrA6pk4lK7cUYgtcfCg1YPZlmUVy99nRDkg33RhjJalb5RGjO69g6iBQ80VlCEYeiTa-Oyuym2a0aheWFTnEMIlRsTusJO2m-AsHvUH5cgWLSqq~5M8q7NYT2imgeaI52JNSrfpTJLAZoI06S4M0Zw1PMqzPpiili080~Jv2qkZGLKz0R~059-wYLD42ZmXmyr7kgfy33jhGT9PWxPlk0vpQ5J8JhVDXMdl621YL6xO1vuA__&Key-Pair-Id=K3USGZIKWMDCSX');"></div><div class="vid-overlay"></div><div class="vid-ai-badge">✦ AI Generated</div><div class="vid-num">29</div><div class="vid-info"><p class="vid-tag tag-ai">Adventure · Cinematic</p><h3 class="vid-title">ABOVE THE CLOUDS</h3></div></div>
+
+      <div class="vid-card ai-card"><div class="vid-thumb" style="background-image:url('https://d41chssnpqdne.cloudfront.net/user_upload_by_module/chat_bot/files/34307915/i57dgpIe05EtRa0G.png?Expires=1777737800&Signature=vNAo1dwL3HzJrHFkywH36xwKFA7q~sG2wFKbuBFCC2hfKmHoK-S~LUR4mImBiyK0j2~RyoEjuk9dcKm~UTnPfhlsBnoJpLghhPe7T~i7K-op7rPew1O0~ZTMU0blVoG4FeUXpPFSp9c-3xs-IAsmL2UG8-kjOHrWSenm9LNBevNY7F67j9nNGt-X~sK1HjEvEFuGaZ5Vc9fDiLtFy1ZdnXT3pmkKK5zIWpO7rR~wzzcS72TsNjLNDxYv8LGvjN7z-yguc12wLcOcsvKkgpl2oaoQ-LUkeQ-EiJ6uL1nHH73eYKRr7PH7Q4ymgbGmo-4nfyv8z0jSDKzi55YX1lx~bA__&Key-Pair-Id=K3USGZIKWMDCSX');"></div><div class="vid-overlay"></div><div class="vid-ai-badge">✦ AI Generated</div><div class="vid-num">30</div><div class="vid-info"><p class="vid-tag tag-ai">Surreal · Concept</p><h3 class="vid-title">TIME MAN</h3></div></div>
+
+      <div class="vid-card ai-card"><div class="vid-thumb" style="background-image:url('https://d41chssnpqdne.cloudfront.net/user_upload_by_module/chat_bot/files/34307915/0DPVclUORADC0Vkl.png?Expires=1777737800&Signature=E5s5bKrsQDIsRLjkCxai1VeWCCWEpmM~U~SYthY9ABOe1jipHQA1DvoT4qJpwIEz4SMAqvyFS82-dwyQUZF-xHEMcVxqo7zLGfMw2-AouhXuWnl8e8ovt8IO5g~XAvPga9H2mzb3TymFAaZS7g-3kNMlFEl3KH4B5eR-dPg9l316PLZBV37BzcSxS1fCpkQtSulHo4AzLWoQXI0J9SUYs5Gm8oVJ8DbzD3Mrzub835gTx-coraP5HUOXZ4VwqILGXNqKydyFgT5HV-eCWrWziDpH9gnVuNBVdSIEkxd6gBzDmr28MhQh6aC~dsUdJCOYcruYl4x5Txxitos9VVJ2Xw__&Key-Pair-Id=K3USGZIKWMDCSX');"></div><div class="vid-overlay"></div><div class="vid-ai-badge">✦ AI Generated</div><div class="vid-num">32</div><div class="vid-info"><p class="vid-tag tag-ai">Surreal · Concept</p><h3 class="vid-title">FLOATING DOOR</h3></div></div>
+
+      <div class="vid-card ai-card"><div class="vid-thumb" style="background-image:url('https://d41chssnpqdne.cloudfront.net/user_upload_by_module/chat_bot/files/34307915/5Q7UPq9m61r2ISlR.png?Expires=1777737800&Signature=jqVE~q~XPQ49kcOI5mzIXXV9YkBNf09-BSb3XnQ4ivC7GSgyqBGSg0qtBW2HD~ltyTtoL~mPFrIjg1Yjn0fnrsKIy8~kRVo~4T0iu1EHGclsnW9Mp9kcNKcsbpVeoW2whJCkPM4xPy~h6Zh2nhoMaQDvq3B8fJoJq55JVBDa4EQYgMqmQ1B7PYsY3MyZFCV0JvbECJ05TGPLH0ja-uecXFLfKglSsURbHvRCwLdk9Mp16Acp81PUUNnYA91q5NbBPbBnGyOMEHENkYE57drelgEVSJV~3EtpvHR01st7guF3CK8ixxq58gHQbQhYw72irqs9UA9AEVueKPZyp17pjw__&Key-Pair-Id=K3USGZIKWMDCSX');"></div><div class="vid-overlay"></div><div class="vid-ai-badge">✦ AI Generated</div><div class="vid-num">33</div><div class="vid-info"><p class="vid-tag tag-ai">Surreal · Cinematic</p><h3 class="vid-title">KOI RAIN</h3></div></div>
+
+      <div class="vid-card ai-card"><div class="vid-thumb" style="background-image:url('https://d41chssnpqdne.cloudfront.net/user_upload_by_module/chat_bot/files/34307915/sLtXftJU1tZspAWM.png?Expires=1777737800&Signature=ii7nE2~WmXHLxJdTp6vP1aKVQSYQmLsx25EfPyOYAtaLBuYnuCFl9OM7RSFcoMsQCO26hBoRFR-kKSKkqn3BBWfGTmsTjcibvJg19UTSN5wIJ6cK3MHkmnzJrCvqOLUGOqRr8AysdtjH2x2NMrs34yNGJaMuKj4HfcTBxmsUpbpuvm1sE3rnzCJ4W~KpqENcBd5~aQwUlXVyjS-P9nBukkS-nSx5AJ2xo2ayxgVdMgE9AC~YgaF8kYPrI~xY8FmKGul2O87qqYvpuhCjzXBDrc23MixX0qMQ96ni8rSaat~uCpXbakTA5VVPv5Tr~LIn7mNE2HkKZtZsGODE~5qyqg__&Key-Pair-Id=K3USGZIKWMDCSX');"></div><div class="vid-overlay"></div><div class="vid-ai-badge">✦ AI Generated</div><div class="vid-num">35</div><div class="vid-info"><p class="vid-tag tag-ai">Brand · Product</p><h3 class="vid-title">COCA-COLA SPLASH</h3></div></div>
+
+      <div class="vid-card ai-card"><div class="vid-thumb" style="background-image:url('https://d41chssnpqdne.cloudfront.net/user_upload_by_module/chat_bot/files/34307915/TLSioLvUifsmMGEu.png?Expires=1777737800&Signature=v~E6R52K5n1RhqD8tSFTNueHjfU4-sNadsHlVxNvuuJe5QG0e8JLB-lUQmNm3M-NH7MPsnWhnJDCWj-7nU3N~uX0uP74CxbwUVEUWq54ALKH~dfX45FQP0rVUYrL6LEigFRYjNz8dJHxT49QSjGShAgMYqOyrly2uW1co3yR7gyGep6nDP2gM2nLV8HTdcKZf-oz3S0SqbrKYSUjLZelASuVwrRQBVKW~p7MSHWKQU0MaAX8IS8zNEQkD-KYBJ2DHOSPpE41zMoUwbnbvuBnNrBGCBrIn6dbMcrdKEaGdxZ1htyMaKjU5WvS783MFXG-ReMG2ehE6GjSaP8tz7ANvQ__&Key-Pair-Id=K3USGZIKWMDCSX');"></div><div class="vid-overlay"></div><div class="vid-ai-badge">✦ AI Generated</div><div class="vid-num">36</div><div class="vid-info"><p class="vid-tag tag-ai">Surreal · Concept</p><h3 class="vid-title">MIRROR PORTAL</h3></div></div>
+
+ <div class="vid-card ai-card"><div class="vid-thumb" style="background-image:url('https://d41chssnpqdne.cloudfront.net/user_upload_by_module/chat_bot/files/34307915/WVZa62bNro9WBAId.png?Expires=1777738801&Signature=vQokvA6vYvYDhhEv9gsGTOjWCZlu85vjGSRNgqI~y9W6JiNhQyMRL7BgZvojoBmF6KhIVAUN4ZovTXqmDSj1r27nwKb1OMHd4TFXnoO30PlOfdno41jQei2omD8ig2BDPo2~PuddoOxIJxITUDSrfGVlZCJlfRNUaDsB8OwRNfG7WYs0KdpWnz~XDMGEqIPqpUAPsDQO2rVYG76iZimnmSl7OctfhMpFb-Y2VZduTBDcD4zmTV0H3Stwzt2hYiGlGHgxwNxLgZpa7rbF-oezoSAVljG-rS3CTxZln0JUc6vty7qeq4WWwuoQxuP0uHc6MirNBsqzK3LlcHBFsZso9w__&Key-Pair-Id=K3USGZIKWMDCSX');"></div><div class="vid-overlay"></div><div class="vid-ai-badge">✦ AI Generated</div><div class="vid-num">37</div><div class="vid-info"><p class="vid-tag tag-ai">Surreal · Portrait</p><h3 class="vid-title">AQUA HELMET</h3></div></div>
+
+      <div class="vid-card ai-card"><div class="vid-thumb" style="background-image:url('https://d41chssnpqdne.cloudfront.net/user_upload_by_module/chat_bot/files/34307915/rJiJaT0NJcJakZOl.png?Expires=1777738837&Signature=dQRaelh3phqXiRtkTT-nsAYfStAphdfSlEndFWGAZoe4lW4zey41ae167D~yDcqp-ijNtbz2PYjqZN3WWQH4~~qblsKt4SCTxNT6iKatDAvTlxbmBNVwwWEoGdEM6-sesBqYhygIHDAqYM2PGUMTGV~g01g7arBVYO26V1Ka4xLsWS-a1TI4gfgHGmq0AJf7geDcnAPfGiVJT0Z4uJKMRoBpgQp021tB2tKFvG0HeH2E9n0fcp6hqbQPJOKwJ614Z5UM~ooLqvQAPstgJV~NlGsUF490dzpkiPv5TbLP5MqVjLaGKUFZdJVN6EMxrbeAMYL-gitXS07WdFTyOerRSg__&Key-Pair-Id=K3USGZIKWMDCSX');"></div><div class="vid-overlay"></div><div class="vid-ai-badge">✦ AI Generated</div><div class="vid-num">38</div><div class="vid-info"><p class="vid-tag tag-ai">Fashion · Editorial</p><h3 class="vid-title">SERPENT</h3></div></div>
+
+      <div class="vid-card ai-card"><div class="vid-thumb" style="background-image:url('https://d41chssnpqdne.cloudfront.net/user_upload_by_module/chat_bot/files/34307915/HDl2yluNE4iRgfxW.png?Expires=1777738867&Signature=EQOFtvoM2uBNZPrOyqWe0opatGEaHRjlAwryYTY6i3~YBM08jArJo6YgswVHoV1Af9g4rRFrzrK5bzklUhxKkp184FlRZAKgCozeJG0yEPDcKYSuvgvoSapuIehCCyQIEFtBIQw-lL~JRQqVoBvtQH4kV4WOYidYPhkLaKOjJjko40k5~42wDGTAKbXQU3xolO-F7-PROiiVPQqpxADmlSQsu7rG1JLmoaFY4yfViM0mcN1ONtiS2Zm7O8aIo4NXyK4LXCUjmzFkdpfn4YBSZSom6qmevjDs2VRDS6krjAoD-Q5OCSAdbk5eWKlSUraUNakhNx9PsnTtFmIAsLWW3g__&Key-Pair-Id=K3USGZIKWMDCSX');"></div><div class="vid-overlay"></div><div class="vid-ai-badge">✦ AI Generated</div><div class="vid-num">39</div><div class="vid-info"><p class="vid-tag tag-ai">Neon · Cyberpunk</p><h3 class="vid-title">NEON NIGHT</h3></div></div>
+
+      <div class="vid-card ai-card"><div class="vid-thumb" style="background-image:url('https://d41chssnpqdne.cloudfront.net/user_upload_by_module/chat_bot/files/34307915/0FuJ3fDAwjx0511i.png?Expires=1777738889&Signature=koxlX~2N1AoTGVs6hbgiVJ1uWJ7l0~R1lEZ-ehAjJvWsAyqO4iaVWbInbT8-FtmoF~L8A8y7BM7ry09i-HhkMm-oB8kl6k~bnpGsTCDMLg6zQPnU99PfCJEWxSuz9iYlvK-u8J6GDWJDtwem6dkoBbTeUj1k2Jr6MBAXjMKcmex0SQ3hbYIgqTbqzf-6FAR45jIBwITzKuA9SbGSp3N6J-~623hI40Fv81-gCv9vNcOtZlRaApJN9C9Qr9DpC473a87tJd1bCOHfLbSPNKB3i6uhSYxNZEjp04jzWKU5x39SMLB8G6dIdD9z-ber-HU14ulmcU1xvlqsRV93zxhDQQ__&Key-Pair-Id=K3USGZIKWMDCSX');"></div><div class="vid-overlay"></div><div class="vid-ai-badge">✦ AI Generated</div><div class="vid-num">40</div><div class="vid-info"><p class="vid-tag tag-ai">Surreal · Dreamscape</p><h3 class="vid-title">FLOATING ISLAND</h3></div></div>
+
+      <div class="vid-card ai-card"><div class="vid-thumb" style="background-image:url('https://d41chssnpqdne.cloudfront.net/user_upload_by_module/chat_bot/files/34307915/fi8ZsjOrFjaTrNjM.png?Expires=1777738899&Signature=AkYTdqN709wXC9eq-ThGJJVu8yzH7TU0EHWhlCRKOpKHJ8mVA3BXPTITuwkkBk3poJJzVpbKxCb9MFMNOkZXvzqRIm1aDRSQQlD8oYOZ~Tm3rv5PMPQ8~Cs1PjgmC3qDZLUHUjucV7wbortz~bODJaOOW-zLMsVacJLqGQi7TQyh5VJyGNRhVpeYN1azG57WEIs30a2f-WuTfJi~x90KwbMPcVQ1sqPu6s-UY0GCurzXKjH5LrxfDkB10SFy6w0ipK3-5jMoBuk8Es-b5hWMFR-dP7i~63vb~WELTOytMpieIW7ek0enH18-gGjA6c~PJYxZnnZtAsfXx8YR8vCfMQ__&Key-Pair-Id=K3USGZIKWMDCSX');"></div><div class="vid-overlay"></div><div class="vid-ai-badge">✦ AI Generated</div><div class="vid-num">41</div><div class="vid-info"><p class="vid-tag tag-ai">Fashion · Editorial</p><h3 class="vid-title">PORCELAIN TATTOO</h3></div></div>
+
+
+    </div>
+  </div>
+  <div class="reel-cta"><a href="https://www.youtube.com/@Burningman_film" target="_blank" rel="noopener" class="btn-yt-ai">View All AI Works on YouTube ↗</a></div>
+</section>
+
+<div class="reel-divider reveal"><div class="reel-divider-line"></div><span class="reel-divider-text">Commercial Reel</span><div class="reel-divider-line"></div></div>
+
+<!-- COMMERCIAL REEL -->
+<section id="ad-reel" class="reel-section reveal">
+  <div class="reel-head">
+    <div>
+      <p class="reel-label">광고 릴</p>
+      <h2 class="reel-title">COMMERCIAL<br><span class="hl">REEL</span></h2>
+      <p class="reel-count">36 WORKS</p>
+    </div>
+    <p class="reel-desc">브랜드의 본질을 시각적 언어로 가장 강렬하게 전달하는 광고영상 포트폴리오.</p>
+  </div>
+  <div class="h-track-wrap">
+        <div class="h-track" id="ad-track">
+          <div class="vid-card ad-card featured"><div class="vid-thumb" style="background-image:url('https://img.youtube.com/vi/j9eLaxr0Agw/maxresdefault.jpg');"></div><div class="vid-overlay"></div><div class="vid-num">01</div><div class="vid-info"><p class="vid-tag tag-ad">Game · Brand Film</p><h3 class="vid-title">LINEAGE SERIES</h3></div></div>
+      <div class="vid-card ad-card"><div class="vid-thumb" style="background-image:url('https://img.youtube.com/vi/AlEf-e72Zfw/maxresdefault.jpg');"></div><div class="vid-overlay"></div><div class="vid-num">02</div><div class="vid-info"><p class="vid-tag tag-ad">Commercial</p><h3 class="vid-title">Sesa living _ 정해인편</h3></div></div>
+      <div class="vid-card ad-card"><div class="vid-thumb" style="background-image:url('https://img.youtube.com/vi/cH-raBeEDSc/maxresdefault.jpg');"></div><div class="vid-overlay"></div><div class="vid-num">03</div><div class="vid-info"><p class="vid-tag tag-ad">Commercial · Reel</p><h3 class="vid-title">JIAHAO GROUP PR</h3></div></div>
+      <div class="vid-card ad-card"><div class="vid-thumb" style="background-image:url('https://img.youtube.com/vi/43ZnldJ-Dq4/maxresdefault.jpg');"></div><div class="vid-overlay"></div><div class="vid-num">04</div><div class="vid-info"><p class="vid-tag tag-ad">Commercial</p><h3 class="vid-title">JIAHAO GROUP PR_THE GALLERIA_장동건편</h3></div></div>
+      <div class="vid-card ad-card"><div class="vid-thumb" style="background-image:url('https://img.youtube.com/vi/H8BKeNbjp2E/maxresdefault.jpg');"></div><div class="vid-overlay"></div><div class="vid-num">05</div><div class="vid-info"><p class="vid-tag tag-ad">Commercial</p><h3 class="vid-title">V&co V코어텍틴 엠플</h3></div></div>
+      <div class="vid-card ad-card"><div class="vid-thumb" style="background-image:url('https://img.youtube.com/vi/yONkleBz0jU/maxresdefault.jpg');"></div><div class="vid-overlay"></div><div class="vid-num">06</div><div class="vid-info"><p class="vid-tag tag-ad">Commercial</p><h3 class="vid-title">Cellapy</h3></div></div>
+      <div class="vid-card ad-card"><div class="vid-thumb" style="background-image:url('https://img.youtube.com/vi/Y-mWVWxTMHc/maxresdefault.jpg');"></div><div class="vid-overlay"></div><div class="vid-num">07</div><div class="vid-info"><p class="vid-tag tag-ad">Commercial</p><h3 class="vid-title">Farm to baby 유지태편</h3></div></div>
+      <div class="vid-card ad-card"><div class="vid-thumb" style="background-image:url('https://img.youtube.com/vi/QTmcKRcf9Vw/maxresdefault.jpg');"></div><div class="vid-overlay"></div><div class="vid-num">08</div><div class="vid-info"><p class="vid-tag tag-ad">Commercial</p><h3 class="vid-title">삼국지전략 이세돌편</h3></div></div>
+      <div class="vid-card ad-card"><div class="vid-thumb" style="background-image:url('https://img.youtube.com/vi/8JVZ79o8J00/maxresdefault.jpg');"></div><div class="vid-overlay"></div><div class="vid-num">09</div><div class="vid-info"><p class="vid-tag tag-ad">Commercial</p><h3 class="vid-title">요괴미식가_선미편</h3></div></div>
+      <div class="vid-card ad-card"><div class="vid-thumb" style="background-image:url('https://img.youtube.com/vi/pa5cYrBhrWU/maxresdefault.jpg');"></div><div class="vid-overlay"></div><div class="vid-num">10</div><div class="vid-info"><p class="vid-tag tag-ad">Commercial</p><h3 class="vid-title">코에픽</h3></div></div>
+      <div class="vid-card ad-card"><div class="vid-thumb" style="background-image:url('https://img.youtube.com/vi/zN_m01qOCxs/maxresdefault.jpg');"></div><div class="vid-overlay"></div><div class="vid-num">11</div><div class="vid-info"><p class="vid-tag tag-ad">Commercial</p><h3 class="vid-title">숙취해소_소유편</h3></div></div>
+      <div class="vid-card ad-card"><div class="vid-thumb" style="background-image:url('https://img.youtube.com/vi/kfjzWMEcV2U/maxresdefault.jpg');"></div><div class="vid-overlay"></div><div class="vid-num">12</div><div class="vid-info"><p class="vid-tag tag-ad">Commercial</p><h3 class="vid-title">HUSTORM</h3></div></div>
+      <div class="vid-card ad-card"><div class="vid-thumb" style="background-image:url('https://img.youtube.com/vi/9MPzL4tW368/maxresdefault.jpg');"></div><div class="vid-overlay"></div><div class="vid-num">13</div><div class="vid-info"><p class="vid-tag tag-ad">Commercial</p><h3 class="vid-title">숙취해소2_소유편</h3></div></div>
+      <div class="vid-card ad-card"><div class="vid-thumb" style="background-image:url('https://img.youtube.com/vi/JWemTwSA90g/maxresdefault.jpg');"></div><div class="vid-overlay"></div><div class="vid-num">14</div><div class="vid-info"><p class="vid-tag tag-ad">Commercial</p><h3 class="vid-title">곤약젤리_소유편</h3></div></div>
+      <div class="vid-card ad-card"><div class="vid-thumb" style="background-image:url('https://img.youtube.com/vi/jFvcK24pafg/maxresdefault.jpg');"></div><div class="vid-overlay"></div><div class="vid-num">15</div><div class="vid-info"><p class="vid-tag tag-ad">Commercial</p><h3 class="vid-title">SUDDEN MASTERS Director ver.</h3></div></div>
+      <div class="vid-card ad-card"><div class="vid-thumb" style="background-image:url('https://img.youtube.com/vi/pY19PGH1hes/maxresdefault.jpg');"></div><div class="vid-overlay"></div><div class="vid-num">16</div><div class="vid-info"><p class="vid-tag tag-ad">Commercial</p><h3 class="vid-title">Blade & Soul PR</h3></div></div>
+      <div class="vid-card ad-card"><div class="vid-thumb" style="background-image:url('https://img.youtube.com/vi/ANu6_F-mk20/maxresdefault.jpg');"></div><div class="vid-overlay"></div><div class="vid-num">17</div><div class="vid-info"><p class="vid-tag tag-ad">Commercial</p><h3 class="vid-title">Antuss China Director ver.</h3></div></div>
+      <div class="vid-card ad-card"><div class="vid-thumb" style="background-image:url('https://img.youtube.com/vi/a9qciF9DEdg/maxresdefault.jpg');"></div><div class="vid-overlay"></div><div class="vid-num">18</div><div class="vid-info"><p class="vid-tag tag-ad">Commercial</p><h3 class="vid-title">Sinovon China</h3></div></div>
+      <div class="vid-card ad-card"><div class="vid-thumb" style="background-image:url('https://img.youtube.com/vi/4iQiSJUy4X4/maxresdefault.jpg');"></div><div class="vid-overlay"></div><div class="vid-num">19</div><div class="vid-info"><p class="vid-tag tag-ad">Commercial</p><h3 class="vid-title">낚시의 신</h3></div></div>
+      <div class="vid-card ad-card"><div class="vid-thumb" style="background-image:url('https://img.youtube.com/vi/kQ6E0vR5tj0/maxresdefault.jpg');"></div><div class="vid-overlay"></div><div class="vid-num">20</div><div class="vid-info"><p class="vid-tag tag-ad">Commercial</p><h3 class="vid-title">BAND-AID</h3></div></div>
+      <div class="vid-card ad-card"><div class="vid-thumb" style="background-image:url('https://img.youtube.com/vi/HYNqMElCKNI/maxresdefault.jpg');"></div><div class="vid-overlay"></div><div class="vid-num">21</div><div class="vid-info"><p class="vid-tag tag-ad">Commercial</p><h3 class="vid-title">DESCENT Giant Hoop Director ver.</h3></div></div>
+      <div class="vid-card ad-card"><div class="vid-thumb" style="background-image:url('https://img.youtube.com/vi/1Kai3CGRgbA/maxresdefault.jpg');"></div><div class="vid-overlay"></div><div class="vid-num">22</div><div class="vid-info"><p class="vid-tag tag-ad">Commercial</p><h3 class="vid-title">KALOKUT_이보영편</h3></div></div>
+      <div class="vid-card ad-card"><div class="vid-thumb" style="background-image:url('https://img.youtube.com/vi/j8d7ElqrLi0/maxresdefault.jpg');"></div><div class="vid-overlay"></div><div class="vid-num">23</div><div class="vid-info"><p class="vid-tag tag-ad">Commercial</p><h3 class="vid-title">MU ORIZIN part 2</h3></div></div>
+      <div class="vid-card ad-card"><div class="vid-thumb" style="background-image:url('https://img.youtube.com/vi/OhAA8IqNgs0/maxresdefault.jpg');"></div><div class="vid-overlay"></div><div class="vid-num">24</div><div class="vid-info"><p class="vid-tag tag-ad">Commercial</p><h3 class="vid-title">PRAZIUM</h3></div></div>
+    </div>
+  </div>
+  <div class="reel-cta"><a href="https://www.youtube.com/watch?v=cH-raBeEDSc&list=PLblM5zixY8SL2rteOMGsYHswr0-auhTtK" target="_blank" rel="noopener" class="btn-yt-ad">View Full Playlist on YouTube ↗</a></div>
+</section>
+
+<!-- ABOUT -->
+<section id="about">
+  <div class="about-left reveal">
+    <p class="about-eyebrow">About Us</p>
+    <h2 class="about-heading">WE TELL<span class="outline">BRAND</span>STORIES</h2>
+    <div class="about-divider"></div>
+    <p class="about-body">Burningman Film은 광고영상, 브랜드 필름, 그리고 AI 광고영상을 전문으로 하는 크리에이티브 프로덕션입니다.</p>
+    <p class="about-body">우리는 단순히 영상을 만들지 않습니다. 브랜드가 가진 본질적인 이야기를 발굴하고, 그것을 시각적 언어로 가장 강렬하게 전달하는 일을 합니다.</p>
+    <div class="about-stats">
+      <div><div class="stat-n">10+</div><div class="stat-l">Years Experience</div></div>
+      <div><div class="stat-n">200+</div><div class="stat-l">Brand Projects</div></div>
+      <div><div class="stat-n">4</div><div class="stat-l">Award Works</div></div>
+      <div><div class="stat-n">AI, TV commercial</div><div class="stat-l">Powered Production</div></div>
+    </div>
+  </div>
+  <div class="about-right reveal">
+    <div class="about-box">
+      <div class="about-box-text">BURN<br>ING<br>MAN</div>
+      <div class="about-corner"></div>
+      <div class="about-badge">Creative<br>Production<br>Studio</div>
+    </div>
+  </div>
+</section>
+
+<!-- SERVICES -->
+<section id="services">
+  <div class="services-top reveal">
+    <div><p class="sec-label">What We Do</p><h2 class="sec-title">OUR<br>SERVICES</h2></div>
+    <div class="sec-count">03</div>
+  </div>
+  <div class="services-list reveal">
+    <div class="svc-item"><div class="svc-num">01</div><div class="svc-name">AD FILM</div><div class="svc-desc">브랜드의 메시지를 가장 강렬하게 전달하는 광고영상 제작. 기획부터 후반작업까지 풀 프로덕션 서비스를 제공합니다.</div><div class="svc-arrow">→</div></div>
+    <div class="svc-item"><div class="svc-num">02</div><div class="svc-name">BRAND FILM</div><div class="svc-desc">브랜드의 철학과 정체성을 담은 시네마틱 브랜드 필름. 감성적 스토리텔링으로 브랜드와 소비자를 연결합니다.</div><div class="svc-arrow">→</div></div>
+    <div class="svc-item"><div class="svc-num">03</div><div class="svc-name">AI AD FILM</div><div class="svc-desc">최신 AI 기술을 활용한 혁신적인 광고영상 제작. 상상을 현실로, 불가능을 가능으로 만드는 AI 크리에이티브.</div><div class="svc-arrow">→</div></div>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section id="contact">
+  <h2 class="contact-big reveal">LET'S<br><span class="outline">CREATE</span><br><span class="fire">TOGETHER</span></h2>
+  <div class="contact-grid">
+    <div class="reveal">
+      <div class="ci-block"><p class="ci-label">Email</p><a href="mailto:conan0817@naver.com" class="ci-val">conan0817@naver.com</a></div>
+      <div class="ci-block"><p class="ci-label">Phone</p><a href="tel:+82 01032879677" class="ci-val">+82 010 3287 9677</a></div>
+      <div class="ci-block"><p class="ci-label">Location</p><p class="ci-addr">10, Magokjungang 1-ro<br>Gangseo-gu, Seoul<br>Republic of Korea</p></div>
+      <div class="ci-block"><p class="ci-label">YouTube</p><a href="https://www.youtube.com/@Burningman_film" target="_blank" rel="noopener" class="ci-val">@Burningman_film ↗</a></div>
+    </div>
+    <form class="contact-form reveal" onsubmit="handleForm(event)">
+      <div class="ff"><label>Name</label><input type="text" placeholder="Your name"/></div>
+      <div class="ff"><label>Email</label><input type="email" placeholder="your@email.com"/></div>
+      <div class="ff"><label>Message</label><textarea placeholder="Tell us about your project..."></textarea></div>
+      <button type="submit" class="form-btn">Send Message</button>
+    </form>
+  </div>
+</section>
+
+<footer>
+  <div class="f-logo">BURNINGMAN AI</div>
+  <p class="f-copy">© 2026 Burningman AI. All rights reserved.</p>
+  <ul class="f-links">
+    <li><a href="#ai-reel">AI Reel</a></li>
+    <li><a href="#ad-reel">Ad Reel</a></li>
+    <li><a href="#contact">Contact</a></li>
+  </ul>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
