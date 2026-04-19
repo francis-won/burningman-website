@@ -1,19 +1,4 @@
 /* ══════════════════════════════════════
-   VID-CARD-INNER 자동 래핑
-══════════════════════════════════════ */
-document.querySelectorAll('.vid-card').forEach(card => {
-  const thumb = card.querySelector('.vid-thumb');
-  const overlay = card.querySelector('.vid-overlay');
-  if (thumb && overlay) {
-    const inner = document.createElement('div');
-    inner.className = 'vid-card-inner';
-    card.insertBefore(inner, thumb);
-    inner.appendChild(thumb);
-    inner.appendChild(overlay);
-  }
-});
-
-/* ══════════════════════════════════════
    THREE.JS BG
 ══════════════════════════════════════ */
 (function(){
